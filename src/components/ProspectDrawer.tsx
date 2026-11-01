@@ -12,8 +12,9 @@ import {
   Route as RouteIcon,
   X,
 } from 'lucide-react'
-import { byId, daysLabel, inrLakhs, initials, prospects, scoreBreakdown, scoreOf } from '../lib/data'
-import { STAGES, useWorkspace } from '../lib/store'
+import { daysLabel, inrLakhs, initials, scoreBreakdown, scoreOf } from '../lib/data'
+import { STAGES, useDataset, useWorkspace } from '../lib/store'
+import { ApiError, fetchAccount } from '../lib/api'
 import { useToast } from '../lib/toast'
 import { ScoreRing } from './ScoreRing'
 import { Meter, StagePill } from './Meter'
@@ -21,12 +22,39 @@ import { SignalRow } from './Signals'
 import type { Stage } from '../lib/types'
 
 export function ProspectDrawer({ id, onClose }: { id: string; onClose: () => void }) {
-  const prospect = byId(id)
+  const { byId, prospects } = useDataset()
   const ws = useWorkspace()
   const toast = useToast()
   const panelRef = useRef<HTMLDivElement>(null)
   const [note, setNote] = useState(() => ws.noteOf(id))
   const [noteDirty, setNoteDirty] = useState(false)
+
+  // Detail is read from GET /api/accounts/:id. The cached bootstrap record is
+  // used as a fallback if the API hiccups, with an explicit notice.
+  const cached = byId(id)
+  const [detail, setDetail] = useState(cached ?? null)
+  const [detailStatus, setDetailStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [detailToken, setDetailToken] = useState(0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setDetailStatus('loading')
+    setDetailError(null)
+    fetchAccount(id, controller.signal)
+      .then((account) => {
+        setDetail(account)
+        setDetailStatus('ready')
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setDetailStatus('error')
+        setDetailError(error instanceof ApiError ? error.message : 'The account record could not be loaded.')
+      })
+    return () => controller.abort()
+  }, [id, detailToken])
+
+  const prospect = detail ?? cached
 
   useEffect(() => {
     setNote(ws.noteOf(id))
@@ -34,19 +62,29 @@ export function ProspectDrawer({ id, onClose }: { id: string; onClose: () => voi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  // Keep the latest onClose without re-running the open/close effect: doing so
+  // re-ran the focus timer on every parent render and stole focus from the
+  // note field mid-typing.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
     document.body.classList.add('is-locked')
-    const timer = window.setTimeout(() => panelRef.current?.focus(), 60)
+    const timer = window.setTimeout(() => {
+      const panel = panelRef.current
+      // Never yank focus from a field the visitor already reached.
+      if (panel && !panel.contains(document.activeElement)) panel.focus()
+    }, 60)
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.classList.remove('is-locked')
       window.clearTimeout(timer)
     }
-  }, [onClose])
+  }, [])
 
   const breakdown = useMemo(() => (prospect ? scoreBreakdown(prospect.scores) : []), [prospect])
   const rank = useMemo(() => {
@@ -89,6 +127,24 @@ export function ProspectDrawer({ id, onClose }: { id: string; onClose: () => voi
         </div>
 
         <div className="drawer__scroll">
+          {/* Always rendered so the rest of the drawer keeps its position in
+              the DOM — otherwise the note field would remount (and drop focus)
+              the moment the detail request resolves. */}
+          <div className="drawer__notices">
+            {detailStatus === 'loading' && (
+              <p className="drawer__notice" role="status">
+                <span className="drawer__spinner" aria-hidden="true" /> Loading the account…
+              </p>
+            )}
+            {detailStatus === 'error' && (
+              <p className="drawer__notice drawer__notice--warn" role="alert">
+                {detailError} {cached ? 'Showing the last loaded copy.' : ''}
+                <button className="link-arrow" onClick={() => setDetailToken((n) => n + 1)}>
+                  Retry
+                </button>
+              </p>
+            )}
+          </div>
           <header className="drawer__head">
             <h2 id="drawer-title" className="drawer__title">
               {prospect.name}
@@ -192,7 +248,7 @@ export function ProspectDrawer({ id, onClose }: { id: string; onClose: () => voi
               ))}
             </ul>
             <p className="drawer__source">
-              Sourced from public registries, filings and trade activity · refreshed daily
+              Synthetic demo signals · illustrative only. Not live filings, registrations or trade data.
             </p>
           </section>
 
@@ -237,19 +293,19 @@ export function ProspectDrawer({ id, onClose }: { id: string; onClose: () => voi
                 <p className="contact-card__role">{prospect.contact.role}</p>
               </div>
               <div className="contact-card__links">
-                <a href={`tel:${prospect.contact.phone.replace(/\s/g, '')}`} className="icon-btn" aria-label="Call">
-                  <Phone size={15} />
-                </a>
-                <a href={`mailto:${prospect.contact.email}`} className="icon-btn" aria-label="Email">
-                  <Mail size={15} />
-                </a>
+                <span className="pill pill--quiet" title="Synthetic contact record — not a real person">
+                  Demo contact
+                </span>
               </div>
             </div>
             <ul className="contact-meta">
               <li>{prospect.contact.phone}</li>
               <li>{prospect.contact.email}</li>
-              {prospect.website && <li>{prospect.website}</li>}
             </ul>
+            <p className="contact-note">
+              Fictional contact for the demo. Numbers use a reserved +91 00000 range and email addresses use
+              the reserved .invalid domain, so nothing here can be dialled or delivered.
+            </p>
           </section>
 
           <section className="drawer__section">
@@ -280,11 +336,9 @@ export function ProspectDrawer({ id, onClose }: { id: string; onClose: () => voi
 
           <footer className="drawer__foot">
             <p>
-              Last refreshed today, 06:30 IST · <span className="muted">Demo record</span>
+              Synthetic demo record · <span className="muted">not a real business</span>
             </p>
-            <a className="link-arrow" href={`https://${prospect.website ?? 'example.in'}`} target="_blank" rel="noreferrer">
-              Public profile <ArrowUpRight size={14} />
-            </a>
+            <span className="muted">Saved in your local demo database</span>
           </footer>
         </div>
       </div>

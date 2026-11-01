@@ -8,7 +8,8 @@ import { Prospects } from './pages/Prospects'
 import { DistrictPage } from './pages/DistrictPage'
 import { RoutePage } from './pages/RoutePage'
 import { MyList } from './pages/MyList'
-import { WorkspaceProvider } from './lib/store'
+import { WorkspaceProvider, useWorkspace } from './lib/store'
+import { BootScreen, BootError } from './components/BootScreen'
 import { ToastProvider } from './lib/toast'
 
 function ScrollToTop() {
@@ -20,27 +21,40 @@ function ScrollToTop() {
   return null
 }
 
+function AppRoutes() {
+  const { status, error, data, reload } = useWorkspace()
+
+  if (status === 'loading' || (status === 'ready' && !data)) return <BootScreen />
+  if (status === 'error' || !data) return <BootError message={error} onRetry={reload} />
+
+  return (
+    <>
+      <ScrollToTop />
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/app" element={<AppShell />}>
+          <Route index element={<Overview />} />
+          <Route path="map" element={<Atlas />} />
+          <Route path="prospects" element={<Prospects />} />
+          <Route path="districts/:slug" element={<DistrictPage />} />
+          <Route path="route" element={<RoutePage />} />
+          <Route path="list" element={<MyList />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
         <WorkspaceProvider>
-          <ScrollToTop />
-          <a href="#main" className="skip-link">
-            Skip to content
-          </a>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/app" element={<AppShell />}>
-              <Route index element={<Overview />} />
-              <Route path="map" element={<Atlas />} />
-              <Route path="prospects" element={<Prospects />} />
-              <Route path="districts/:slug" element={<DistrictPage />} />
-              <Route path="route" element={<RoutePage />} />
-              <Route path="list" element={<MyList />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <AppRoutes />
         </WorkspaceProvider>
       </ToastProvider>
     </BrowserRouter>

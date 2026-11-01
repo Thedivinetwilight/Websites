@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, CircleDot, MapPin, Route as RouteIcon } from 'lucide-react'
-import { TOTALS, allDistricts, byId, inrLakhs, scoreOf } from '../../lib/data'
+import { inrLakhs, scoreOf } from '../../lib/data'
+import { useDataset } from '../../lib/store'
 import { ScoreRing } from '../ScoreRing'
 import { SignalChips } from '../Signals'
 import { TnMap } from '../TnMap'
@@ -8,6 +9,7 @@ import { TnMap } from '../TnMap'
 const HERO_ACCOUNTS = ['TH-1002', 'TH-1000', 'TH-1006']
 
 export function HeroBrief({ accounts }: { accounts: string[] }) {
+  const { totals: TOTALS, allDistricts, byId } = useDataset()
   const rows = HERO_ACCOUNTS.map((id) => byId(id)).filter(Boolean)
   const tiruppur = allDistricts.find((d) => d.name === 'Tiruppur')!
 
@@ -35,7 +37,7 @@ export function HeroBrief({ accounts }: { accounts: string[] }) {
       <div className="hero-tag hero-tag--top">
         <CircleDot size={13} />
         <span>
-          <strong>{tiruppur.signalCount} signals</strong> in Tiruppur this month
+          <strong>{tiruppur.signalCount} sample signals</strong> in Tiruppur
         </span>
       </div>
 
@@ -43,10 +45,10 @@ export function HeroBrief({ accounts }: { accounts: string[] }) {
         <div className="brief-card__head">
           <div>
             <span className="brief-card__eyebrow">Morning brief</span>
-            <p className="brief-card__date">Sunday, 1 November · rebuilt 06:30 IST</p>
+            <p className="brief-card__date">Sample brief · fixed demo snapshot</p>
           </div>
           <span className="live-pill">
-            <span className="dot-live" /> Live
+            <span className="dot-live" /> Demo
           </span>
         </div>
 
@@ -91,7 +93,7 @@ export function HeroBrief({ accounts }: { accounts: string[] }) {
 
       <div className="hero-tag hero-tag--bottom">
         <span className="hero-tag__score">+12</span>
-        <span>score change this week</span>
+        <span>illustrative score move</span>
       </div>
     </div>
   )

@@ -27,12 +27,14 @@ import type { OutletCtx } from '../components/AppShell'
 import { TnMap } from '../components/TnMap'
 import { ScoreRing } from '../components/ScoreRing'
 import { SignalChips } from '../components/Signals'
-import { inrLakhs, prospects, scoreOf, byId } from '../lib/data'
-import { useWorkspace } from '../lib/store'
+import { inrLakhs, scoreOf } from '../lib/data'
+import { useDataset, useWorkspace } from '../lib/store'
+import type { Prospect } from '../lib/types'
 import { useToast } from '../lib/toast'
 import { clock, dateLabelLong, durationLabel, isLongDay, planRoute } from '../lib/route'
 
 export function RoutePage() {
+  const { prospects, byId } = useDataset()
   const { openAccount } = useOutletContext<OutletCtx>()
   const ws = useWorkspace()
   const toast = useToast()
@@ -41,7 +43,10 @@ export function RoutePage() {
   const [fieldMode, setFieldMode] = useState(false)
   const [fieldIndex, setFieldIndex] = useState(0)
 
-  const plan = useMemo(() => planRoute(ws.state.route), [ws.state.route])
+  const plan = useMemo(
+    () => planRoute(ws.state.route.map((id) => byId(id)).filter(Boolean) as Prospect[]),
+    [ws.state.route, byId],
+  )
   const routeIds = new Set(ws.state.route)
   const districts = new Set(plan.stops.map((s) => s.prospect.district))
   const potential = plan.stops.reduce((s, x) => s + x.prospect.potentialL, 0)
@@ -72,13 +77,8 @@ export function RoutePage() {
         return scoreOf(b.prospect) - scoreOf(a.prospect)
       })
       .map((s) => s.prospect.id)
-    ordered.forEach((id, index) => {
-      const current = ws.state.route.indexOf(id)
-      const delta = index - current
-      if (delta > 0) for (let i = 0; i < delta; i++) ws.moveStop(id, 1)
-      if (delta < 0) for (let i = 0; i < -delta; i++) ws.moveStop(id, -1)
-    })
-    const next = planRoute(ordered)
+    ws.setRouteOrder(ordered)
+    const next = planRoute(ordered.map((id) => byId(id)).filter(Boolean) as Prospect[])
     toast(`Route reordered · ${next.totalKm} km, ${durationLabel(next.totalMinutes)} door to door`)
   }
 
@@ -430,9 +430,9 @@ export function RoutePage() {
                   {activeStop.prospect.contact.name} · {activeStop.prospect.contact.role}
                 </p>
               </div>
-              <a className="btn btn--sm" href={`tel:${activeStop.prospect.contact.phone.replace(/\s/g, '')}`}>
-                <Phone size={14} /> Call
-              </a>
+              <span className="pill pill--quiet" title="Synthetic contact — calling is disabled in the demo">
+                Demo contact · {activeStop.prospect.contact.phone}
+              </span>
             </div>
             {ws.noteOf(activeStop.prospect.id) && (
               <div className="field-mode__note">

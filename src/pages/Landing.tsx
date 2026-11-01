@@ -22,15 +22,16 @@ import { Reveal, CountUp } from '../components/Reveal'
 import { Brand } from '../components/Brand'
 import { Meter } from '../components/Meter'
 import { Sparkline } from '../components/Sparkline'
-import { TOTALS, allDistricts, inrLakhs } from '../lib/data'
+import { inrLakhs } from '../lib/data'
+import { useDataset } from '../lib/store'
 
 const SOURCES = [
-  'MCA & GST registrations',
-  'Udyam filings',
-  'Trade & export directories',
-  'Hiring boards',
-  'Licence & utility records',
-  'District industrial profiles',
+  '421 synthetic accounts',
+  '37 Tamil Nadu districts',
+  '12 sectors · 1,246 signals',
+  'Real district boundaries (MIT)',
+  'Fixed demo snapshot — no live feeds',
+  'No scraped contact data',
 ]
 
 const PROBLEMS = [
@@ -50,7 +51,7 @@ const PROBLEMS = [
     n: '03',
     title: 'Timing is the whole game.',
     body: 'A new unit, a fresh credit line, a first export. The best week to call is visible months before a tender — if somebody is watching the right public records every morning.',
-    detail: '62% of this week’s top accounts show a growth or credit signal.',
+    detail: '62% of the seeded top accounts show a growth or credit signal.',
   },
 ]
 
@@ -97,8 +98,8 @@ const FEATURES = [
   },
   {
     icon: Languages,
-    title: 'Tamil-ready, offline-tolerant',
-    body: 'Field mode reads in Tamil or English, and keeps the day moving on a patchy signal in the Nilgiris. Notes sync when the phone does.',
+    title: 'Tamil-ready, built for the road',
+    body: 'Field mode reads in Tamil or English, and the workspace is built for a rep standing outside a gate — large taps, short labels, no spreadsheet.',
     to: '/app/prospects',
     link: 'Open an account',
     visual: 'tamil',
@@ -176,6 +177,7 @@ function FeatureVisual({ kind }: { kind: string }) {
 }
 
 export function Landing() {
+  const { totals: TOTALS, allDistricts } = useDataset()
   const tin = allDistricts.find((d) => d.name === 'Tiruppur')!
 
   return (
@@ -201,7 +203,7 @@ export function Landing() {
                 before you <em>knock.</em>
               </h1>
               <p className="lede hero__lede">
-                Theru turns public business signals from all thirty-seven districts into one thing your field team can
+                Theru turns the business signals behind all thirty-seven districts into one thing your field team can
                 use: <strong>a ranked list of who to call today</strong> — and the reason to call.
               </p>
               <div className="hero__ctas">
@@ -224,7 +226,7 @@ export function Landing() {
                   <span className="hero__proof-value tnum">
                     <CountUp value={TOTALS.signals} />
                   </span>
-                  <span className="hero__proof-label">live signals</span>
+                  <span className="hero__proof-label">signals</span>
                 </div>
                 <span className="hero__proof-div" aria-hidden="true" />
                 <div>
@@ -245,7 +247,7 @@ export function Landing() {
           </div>
 
           <div className="wrap hero__sources">
-            <span className="hero__sources-label">Built on public, permissioned signals</span>
+            <span className="hero__sources-label">What this demo is built on</span>
             <ul className="hero__sources-list">
               {SOURCES.map((s) => (
                 <li key={s}>{s}</li>
@@ -301,7 +303,7 @@ export function Landing() {
               <Reveal delay={260} className="problem__closer">
                 <p>That is the gap Theru closes — one district, one street, one ranked list at a time.</p>
                 <Link to="/app" className="link-arrow">
-                  See it with real district data <ArrowRight size={14} />
+                  See it across all 37 districts <ArrowRight size={14} />
                 </Link>
               </Reveal>
             </div>
@@ -368,7 +370,7 @@ export function Landing() {
                 already knowing <em>why you’re there.</em>
               </h2>
               <p className="cta__body">
-                The full workspace is open — {TOTALS.accounts} accounts, {TOTALS.districts} districts, a live route and
+                The full workspace is open — {TOTALS.accounts} accounts, {TOTALS.districts} districts, a working route and
                 a pipeline you can move. Give it ten minutes before your next client call.
               </p>
               <div className="cta__actions">

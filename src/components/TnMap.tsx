@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
-import { geo, districtRollup } from '../lib/data'
+import { geo } from '../lib/geo'
+import { useDataset } from '../lib/store'
 import {
   MAP_METRICS,
   districtMetricValue,
@@ -58,6 +59,7 @@ export function TnMap({
   ariaLabel = 'Map of Tamil Nadu districts',
   markers = [],
 }: TnMapProps) {
+  const districts = useDataset().allDistricts
   const wrapRef = useRef<HTMLDivElement>(null)
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null)
 
@@ -170,8 +172,8 @@ export function TnMap({
 
     const centres = new Map(paths.map((p) => [p.name, { x: p.cx, y: p.cy }]))
 
-    return { width: w, height: h, paths, labels, range: metricRange(metric), centres }
-  }, [metric])
+    return { width: w, height: h, paths, labels, range: metricRange(metric, districts), centres }
+  }, [metric, districts])
 
   const handleMove = (name: string) => (e: React.MouseEvent) => {
     if (!showTooltip) return
@@ -191,7 +193,7 @@ export function TnMap({
       >
         <g className="tnmap__districts">
           {paths.map((p) => {
-            const value = districtMetricValue(p.name, metric)
+            const value = districtMetricValue(p.name, metric, districts)
             const isSelected = selected === p.name
             const isDim = highlightSet?.length
               ? !highlightSet.includes(p.name)
@@ -204,7 +206,7 @@ export function TnMap({
                 className={`tnmap__district ${isSelected ? 'is-selected' : ''} ${isDim ? 'is-dim' : ''}`}
                 tabIndex={interactive ? 0 : -1}
                 role={interactive ? 'button' : undefined}
-                aria-label={`${p.name}: ${metricLabel(p.name, metric)}`}
+                aria-label={`${p.name}: ${metricLabel(p.name, metric, districts)}`}
                 onMouseEnter={handleMove(p.name)}
                 onMouseMove={handleMove(p.name)}
                 onMouseLeave={() => setHover(null)}
@@ -217,7 +219,7 @@ export function TnMap({
                   }
                 }}
               >
-                <path d={p.d} fill={metricColor(value, metric, range)} stroke="#f5efe3" strokeWidth="1" />
+                <path d={p.d} fill={metricColor(value, metric, districts, range)} stroke="#f5efe3" strokeWidth="1" />
               </g>
             )
           })}
@@ -280,7 +282,7 @@ export function TnMap({
           role="presentation"
         >
           <span className="tnmap__tip-name">{hover.name}</span>
-          <span className="tnmap__tip-metric">{metricLabel(hover.name, metric)}</span>
+          <span className="tnmap__tip-metric">{metricLabel(hover.name, metric, districts)}</span>
           {interactive && <span className="tnmap__tip-cta">Open district →</span>}
         </div>
       )}
@@ -297,11 +299,12 @@ export function MapLegend({
   className?: string
   compact?: boolean
 }) {
-  const range = metricRange(metric)
+  const districts = useDataset().allDistricts
+  const range = metricRange(metric, districts)
   const stops = 5
   const gradient = Array.from({ length: stops }, (_, i) => {
     const v = range.min + ((range.max - range.min) * i) / (stops - 1)
-    return metricColor(v, metric, range)
+    return metricColor(v, metric, districts, range)
   }).join(', ')
   return (
     <div className={`map-legend ${className}`}>

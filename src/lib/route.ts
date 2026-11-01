@@ -1,5 +1,5 @@
 import type { Prospect } from './types'
-import { byId, geo } from './data'
+import { geo } from './geo'
 
 const centroids = new Map(geo.features.map((f) => [f.properties.district, f.properties.centroid]))
 
@@ -45,10 +45,8 @@ export interface RouteStop {
   breakStart?: number
 }
 
-export function planRoute(ids: string[], startMinutes = START_MINUTES) {
-  const stops = ids
-    .map((id) => byId(id))
-    .filter(Boolean) as Prospect[]
+/** Build the day from already-resolved accounts (order = visit order). */
+export function planRoute(stops: Prospect[], startMinutes = START_MINUTES) {
 
   let cursor = startMinutes
   let totalKm = 0

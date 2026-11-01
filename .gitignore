@@ -1,5 +1,8 @@
 node_modules/
 dist/
-.scratch/
+dist-server/
+.data/
 *.tsbuildinfo
+coverage/
+.scratch/
 .DS_Store

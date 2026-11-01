@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -13,22 +13,14 @@ import {
   Route as RouteIcon,
   Search,
   SlidersHorizontal,
+  WifiOff,
 } from 'lucide-react'
 import type { OutletCtx } from '../components/AppShell'
-import {
-  REGIONS,
-  SECTORS,
-  SIGNAL_META,
-  allDistricts,
-  inrLakhs,
-  prospects,
-  scoreOf,
-  signalStrength,
-  slugify,
-} from '../lib/data'
+import { REGIONS, SIGNAL_META, inrLakhs, scoreOf } from '../lib/data'
 import type { Prospect, Stage } from '../lib/types'
-import { useWorkspace } from '../lib/store'
+import { useDataset, useWorkspace } from '../lib/store'
 import { useToast } from '../lib/toast'
+import { ApiError, searchAccounts, type AccountQuery } from '../lib/api'
 import { ScoreRing } from '../components/ScoreRing'
 import { StagePill } from '../components/Meter'
 import { SignalChips } from '../components/Signals'
@@ -44,6 +36,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 const PAGE_SIZE = 12
 
 export function Prospects() {
+  const data = useDataset()
   const { openAccount } = useOutletContext<OutletCtx>()
   const ws = useWorkspace()
   const toast = useToast()
@@ -58,45 +51,82 @@ export function Prospects() {
   const [sort, setSort] = useState<SortKey>('score')
   const [page, setPage] = useState(0)
 
+  const [rows, setRows] = useState<Prospect[]>([])
+  const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState({ potentialL: 0, strongMomentum: 0 })
+  const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [listError, setListError] = useState<string | null>(null)
+  const [retryToken, setRetryToken] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+
   useEffect(() => {
     setDistrict(params.get('district') ?? 'All')
     setSector(params.get('sector') ?? 'All')
     setSavedOnly(params.get('saved') === '1')
   }, [params])
 
-  const districtOptions = useMemo(() => allDistricts.map((d) => d.name), [])
+  const districtOptions = useMemo(() => data.allDistricts.map((d) => d.name), [])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const rows = prospects.filter((p) => {
-      if (district !== 'All' && p.district !== district) return false
-      if (sector !== 'All' && p.sector !== sector) return false
-      if (region !== 'All' && allDistricts.find((d) => d.name === p.district)?.region !== region) return false
-      if (stage !== 'all' && ws.stageOf(p.id) !== stage) return false
-      if (savedOnly && !ws.isSaved(p.id)) return false
-      if (q) {
-        const hay = `${p.name} ${p.sector} ${p.subSector} ${p.district} ${p.locality} ${p.id}`.toLowerCase()
-        if (!hay.includes(q)) return false
-      }
-      return true
-    })
+  // Every filter change goes through the API — the server owns search,
+  // filtering, sorting and pagination (see GET /api/accounts).
+  const filters: AccountQuery = useMemo(
+    () => ({
+      q: query.trim() || undefined,
+      district: district === 'All' ? undefined : district,
+      sector: sector === 'All' ? undefined : sector,
+      region: region === 'All' ? undefined : region,
+      stage,
+      saved: savedOnly,
+      sort,
+    }),
+    [query, district, sector, region, stage, savedOnly, sort],
+  )
 
-    return rows.sort((a, b) => {
-      if (sort === 'potential') return b.potentialL - a.potentialL
-      if (sort === 'momentum') return b.scores.momentum - a.scores.momentum
-      if (sort === 'name') return a.name.localeCompare(b.name)
-      if (sort === 'signals') return signalStrength(b) - signalStrength(a)
-      return scoreOf(b) - scoreOf(a)
-    })
-  }, [query, district, sector, region, stage, savedOnly, sort, ws])
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const safePage = Math.min(page, pageCount - 1)
-  const pageRows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
+  const queryKey = JSON.stringify(filters)
 
   useEffect(() => {
     setPage(0)
-  }, [query, district, sector, region, stage, savedOnly, sort])
+  }, [queryKey])
+
+  const fetchPage = useCallback(
+    async (pageIndex: number, signal: AbortSignal) => {
+      setListStatus('loading')
+      setListError(null)
+      try {
+        const result = await searchAccounts(
+          { ...filters, limit: PAGE_SIZE, offset: pageIndex * PAGE_SIZE },
+          signal,
+        )
+        if (signal.aborted) return
+        setRows(result.data)
+        setTotal(result.page.total)
+        setSummary(result.summary)
+        setListStatus('ready')
+      } catch (error) {
+        if (signal.aborted) return
+        setListStatus('error')
+        setListError(
+          error instanceof ApiError ? error.message : 'The account search could not be completed.',
+        )
+      }
+    },
+    [filters],
+  )
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const handle = window.setTimeout(() => {
+      void fetchPage(page, controller.signal)
+    }, query ? 220 : 0)
+
+    return () => {
+      window.clearTimeout(handle)
+      controller.abort()
+    }
+  }, [fetchPage, page, query, retryToken])
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
 
   const activeFilters = [
     district !== 'All' ? { label: `District: ${district}`, clear: () => setDistrict('All') } : null,
@@ -116,8 +146,13 @@ export function Prospects() {
     setParams({})
   }
 
-  const exportCsv = () => {
-    const header = [
+  const [exporting, setExporting] = useState(false)
+
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      const result = await searchAccounts({ ...filters, limit: 500, offset: 0 })
+      const header = [
       'id',
       'name',
       'sector',
@@ -133,8 +168,8 @@ export function Prospects() {
       'contact_name',
       'contact_role',
     ]
-    const rows = filtered.map((p) => [
-      p.id,
+      const csvRows = result.data.map((p) => [
+        p.id,
       p.name,
       p.sector,
       p.subSector,
@@ -149,17 +184,22 @@ export function Prospects() {
       p.contact.name,
       p.contact.role,
     ])
-    const csv = [header, ...rows]
-      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `theru-prospects-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast(`Exported ${filtered.length} accounts to CSV`)
+      const csv = [header, ...csvRows]
+        .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `theru-prospects-${Date.now()}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast(`Exported ${result.data.length} accounts to CSV`)
+    } catch (error) {
+      toast(`Export failed. ${error instanceof ApiError ? error.message : 'Try again.'}`, 'error')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const quickAction = (p: Prospect, action: 'save' | 'route') => {
@@ -181,7 +221,7 @@ export function Prospects() {
     <div className="page page--prospects">
       <header className="page-head">
         <div>
-          <p className="page-eyebrow">Prospect workspace · {prospects.length} accounts · 12 sectors</p>
+          <p className="page-eyebrow">Prospect workspace · {data.totals.accounts} accounts · {data.sectors.length} sectors</p>
           <h1 className="page-title display">Every account, with a reason to call.</h1>
           <p className="page-sub">
             Filter by district, fit or stage. Open a record to see the signals, the people and the potential behind the
@@ -189,8 +229,8 @@ export function Prospects() {
           </p>
         </div>
         <div className="page-head__actions">
-          <button className="btn btn--sm btn--ghost" onClick={exportCsv}>
-            <Download size={14} /> Export CSV
+          <button className="btn btn--sm btn--ghost" onClick={exportCsv} disabled={exporting}>
+            <Download size={14} /> {exporting ? 'Exporting…' : 'Export CSV'}
           </button>
           <Link to="/app/route" className="btn btn--sm">
             <RouteIcon size={14} /> Build a route
@@ -231,7 +271,7 @@ export function Prospects() {
             <span>Sector</span>
             <select value={sector} onChange={(e) => setSector(e.target.value)}>
               <option value="All">All sectors</option>
-              {SECTORS.map((s) => (
+              {data.sectors.map((s) => (
                 <option key={s.name} value={s.name}>
                   {s.name}
                 </option>
@@ -304,11 +344,12 @@ export function Prospects() {
       <section className="panel list-panel">
         <div className="list-head">
           <span className="list-count tnum">
-            {filtered.length} <span>accounts</span>
+            {total} <span>{total === 1 ? 'account' : 'accounts'}</span>
+            {listStatus === 'loading' && <span className="list-count__pulse" aria-label="Updating results" />}
           </span>
           <span className="list-summary-text">
-            {inrLakhs(filtered.reduce((s, p) => s + p.potentialL, 0))} open potential ·{' '}
-            {filtered.filter((p) => p.scores.momentum >= 80).length} with strong momentum
+            {inrLakhs(summary.potentialL)} open potential · {summary.strongMomentum} with strong momentum
+            {listStatus === 'error' && <span className="list-summary-error"> · search unavailable</span>}
           </span>
         </div>
 
@@ -325,7 +366,7 @@ export function Prospects() {
             </span>
           </div>
 
-          {pageRows.map((p) => {
+          {rows.map((p) => {
             const saved = ws.isSaved(p.id)
             const routed = ws.inRoute(p.id)
             const stageValue = ws.stageOf(p.id)
@@ -396,7 +437,36 @@ export function Prospects() {
             )
           })}
 
-          {pageRows.length === 0 && (
+          {listStatus === 'loading' &&
+            rows.length === 0 &&
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="prospect-row prospect-row--skeleton" aria-hidden="true">
+                <div className="prospect-row__account">
+                  <span className="skeleton skeleton--name" />
+                  <span className="skeleton skeleton--meta" />
+                </div>
+                <span className="skeleton skeleton--cell" />
+                <span className="skeleton skeleton--ring" />
+                <span className="skeleton skeleton--cell" />
+                <span className="skeleton skeleton--cell" />
+                <span className="skeleton skeleton--pill" />
+                <span />
+              </div>
+            ))}
+
+          {listStatus === 'error' && (
+            <div className="empty-state empty-state--lg" role="alert">
+              <p className="empty-state__title">
+                <WifiOff size={16} /> Account search is unavailable.
+              </p>
+              <p>{listError ?? 'The demo API did not respond.'}</p>
+              <button className="btn btn--sm btn--ghost" onClick={() => setRetryToken((n) => n + 1)}>
+                <RotateCcw size={14} /> Try again
+              </button>
+            </div>
+          )}
+
+          {listStatus === 'ready' && rows.length === 0 && (
             <div className="empty-state empty-state--lg">
               <p className="empty-state__title">No accounts match those filters.</p>
               <p>Try a wider district, a different stage, or clear the search.</p>
@@ -409,8 +479,7 @@ export function Prospects() {
 
         <div className="pagination">
           <span className="pagination__count tnum">
-            {filtered.length === 0 ? 0 : safePage * PAGE_SIZE + 1}–
-            {Math.min(filtered.length, (safePage + 1) * PAGE_SIZE)} of {filtered.length}
+            {total === 0 ? 0 : safePage * PAGE_SIZE + 1}–{Math.min(total, (safePage + 1) * PAGE_SIZE)} of {total}
           </span>
           <div className="pagination__controls">
             <button
@@ -437,8 +506,8 @@ export function Prospects() {
       </section>
 
       <div className="page-footnote">
-        <ArrowRight size={13} /> Scores recalculate nightly from public signals. Stage and stage changes are stored in
-        this browser only.
+        <ArrowRight size={13} /> Synthetic demo records — scores are illustrative and fixed. Saves, stages, notes and
+        routes are stored in the local SQLite demo database, not in a browser.
       </div>
     </div>
   )

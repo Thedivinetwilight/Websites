@@ -13,22 +13,9 @@ import {
   Users,
 } from 'lucide-react'
 import type { OutletCtx } from '../components/AppShell'
-import {
-  SECTORS,
-  TOTALS,
-  SIGNAL_META,
-  TOP_MOVERS,
-  allDistricts,
-  briefAccounts,
-  byId,
-  compact,
-  daysLabel,
-  inrLakhs,
-  prospects,
-  scoreOf,
-  signalStrength,
-} from '../lib/data'
+import { SIGNAL_META, compact, daysLabel, inrLakhs, scoreOf, signalStrength } from '../lib/data'
 import { useWorkspace } from '../lib/store'
+import type { Prospect } from '../lib/types'
 import { useToast } from '../lib/toast'
 import { ScoreRing } from '../components/ScoreRing'
 import { Sparkline } from '../components/Sparkline'
@@ -37,10 +24,20 @@ import { SignalChips, SignalIcon } from '../components/Signals'
 import { planRoute, clock, durationLabel, dateLabelLong } from '../lib/route'
 import { TnMap } from '../components/TnMap'
 import { slugify } from '../lib/data'
+import { useDataset } from '../lib/store'
 
 const FILTERS = ['All', 'Growth', 'Export', 'Credit', 'Hiring'] as const
 
 export function Overview() {
+  const {
+    prospects,
+    sectors: SECTORS,
+    totals: TOTALS,
+    topMovers: TOP_MOVERS,
+    allDistricts,
+    brief: briefAccounts,
+    byId,
+  } = useDataset()
   const { openAccount } = useOutletContext<OutletCtx>()
   const ws = useWorkspace()
   const toast = useToast()
@@ -53,7 +50,10 @@ export function Overview() {
   }, [filter])
 
   const fastest = TOP_MOVERS[0]
-  const route = useMemo(() => planRoute(ws.state.route), [ws.state.route])
+  const route = useMemo(
+    () => planRoute(ws.state.route.map((id) => byId(id)).filter(Boolean) as Prospect[]),
+    [ws.state.route, byId],
+  )
   const plan = route
 
   const savedPotential = ws.savedProspects.reduce((sum, p) => sum + p.potentialL, 0)
@@ -117,7 +117,7 @@ export function Overview() {
         </div>
         <div className="brief-hero__content">
           <p className="brief-hero__eyebrow">
-            <Sparkles size={13} /> Today’s read · 06:30 IST
+            <Sparkles size={13} /> Today’s read · demo brief
           </p>
           <h2 className="brief-hero__title">
             The west is moving. <em>{lead.name}</em> is today’s first call.
@@ -210,7 +210,7 @@ export function Overview() {
           <div className="panel__head">
             <div>
               <h2 className="panel__title">Today’s brief</h2>
-              <p className="panel__sub">Ranked by signal strength, refreshed 06:30 IST</p>
+              <p className="panel__sub">Ranked by signal strength · synthetic demo data</p>
             </div>
             <div className="chip-row" role="group" aria-label="Filter brief by signal">
               {FILTERS.map((f) => (

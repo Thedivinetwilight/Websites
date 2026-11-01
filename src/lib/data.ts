@@ -1,12 +1,10 @@
-import prospectJson from '../data/prospects.json'
-import districtJson from '../data/districts.json'
-import geoJson from '../data/geo.json'
-import type { DistrictMeta, GeoCollection, Prospect, Scores } from './types'
+import type { Prospect, Scores } from './types'
 
-export const prospects = prospectJson as unknown as Prospect[]
-export const districtMeta = (districtJson as unknown as { months: string[]; districts: DistrictMeta[] }).districts
-export const months = (districtJson as unknown as { months: string[]; districts: DistrictMeta[] }).months
-export const geo = geoJson as unknown as GeoCollection
+/**
+ * Pure presentation helpers and constants. The actual records (accounts,
+ * districts, signals) now arrive from the demo API — see lib/dataset.ts and
+ * lib/store.tsx. Nothing here imports seed JSON.
+ */
 
 export const OWNERS = ['Priya Raman', 'Karthik Selvam', 'Divya Mani', 'Arun Prakash'] as const
 
@@ -19,8 +17,8 @@ export const REGION_NOTES: Record<string, string> = {
   South: 'Madurai, the southern districts and the port economies.',
 }
 
-/** Weighted score used throughout the workspace. */
-export function scoreOf(p: Prospect | Scores): number {
+/** Weighted score used throughout the workspace. Mirrors the server's stored score. */
+export function scoreOf(p: Prospect | Scores | { scores: Scores }): number {
   const s = 'scores' in p ? p.scores : p
   return Math.round(s.fit * 0.32 + s.momentum * 0.3 + s.footprint * 0.22 + s.reach * 0.16)
 }
@@ -40,11 +38,6 @@ export function signalStrength(p: Prospect): number {
   return Math.min(100, Math.round(weighted * 1.55))
 }
 
-export function byId(id: string | undefined | null): Prospect | undefined {
-  if (!id) return undefined
-  return prospects.find((p) => p.id === id)
-}
-
 export function slugify(name: string) {
   return name
     .toLowerCase()
@@ -52,86 +45,17 @@ export function slugify(name: string) {
     .replace(/(^-|-$)/g, '')
 }
 
-export const districtByName = new Map(districtMeta.map((d) => [d.name, d]))
-
-export function districtRollup(name: string) {
-  const d = districtByName.get(name)
-  const rows = prospects.filter((p) => p.district === name)
-  const sectorCounts = new Map<string, number>()
-  rows.forEach((p) => sectorCounts.set(p.sector, (sectorCounts.get(p.sector) || 0) + 1))
-  const topSector = [...sectorCounts.entries()].sort((a, b) => b[1] - a[1])[0]
-  return {
-    ...(d as DistrictMeta),
-    prospects: rows.length,
-    potentialL: rows.reduce((s, p) => s + p.potentialL, 0),
-    signalCount: rows.reduce((s, p) => s + p.signals.length, 0),
-    sectorLabel: topSector ? topSector[0] : 'Diversified',
-  }
-}
-
-export const allDistricts = districtMeta
-  .map((d) => ({ ...d, ...districtRollup(d.name) }))
-  .sort((a, b) => b.momentum - a.momentum)
-
-export const SECTORS = Array.from(new Set(prospects.map((p) => p.sector)))
-  .map((name) => {
-    const rows = prospects.filter((p) => p.sector === name)
-    return {
-      name,
-      count: rows.length,
-      potentialL: Math.round(rows.reduce((s, p) => s + p.potentialL, 0)),
-      avgScore: Math.round(rows.reduce((s, p) => s + scoreOf(p), 0) / rows.length),
-      growth: Math.round(rows.reduce((s, p) => s + p.scores.momentum, 0) / rows.length),
-    }
-  })
-  .sort((a, b) => b.count - a.count)
-
-export const TOTALS = {
-  accounts: prospects.length,
-  districts: districtMeta.length,
-  signals: prospects.reduce((s, p) => s + p.signals.length, 0),
-  sectors: SECTORS.length,
-  potentialL: Math.round(prospects.reduce((s, p) => s + p.potentialL, 0)),
-  employees: prospects.reduce((s, p) => s + p.employees, 0),
-  savedPotentialL: Math.round(
-    prospects.filter((p) => p.spotlight).reduce((s, p) => s + p.potentialL, 0),
-  ),
-  newSignalsThisMonth: prospects.reduce(
-    (s, p) => s + p.signals.filter((x) => x.daysAgo <= 30).length,
-    0,
-  ),
-}
-
-export const SPOTLIGHT = prospects.filter((p) => p.spotlight)
-
-/** Accounts surfaced in the morning brief, in a deliberate demo order. */
-export const BRIEF_IDS = [
-  'TH-1000', // Anandhaa Knitwear
-  'TH-1001', // Meenakshi Diagnostics
-  'TH-1003', // Vanathi Technologies
-  'TH-1004', // Sakthi Pumps
-  'TH-1002', // Sri Velan Logistics
-  'TH-1007', // Kurinji Retreat
-]
-
-export const briefAccounts = BRIEF_IDS.map((id) => byId(id)).filter(Boolean) as Prospect[]
-
-export const TOP_MOVERS = allDistricts
-  .slice()
-  .sort((a, b) => b.growth - a.growth)
-  .slice(0, 5)
-
 export const SIGNAL_META: Record<
   string,
   { label: string; short: string; tone: 'jade' | 'turmeric' | 'clay'; description: string }
 > = {
-  growth: { label: 'Growth', short: 'Growth', tone: 'jade', description: 'Registrations, turnover and expansion' },
-  hiring: { label: 'Hiring', short: 'Hiring', tone: 'jade', description: 'Open roles and headcount movement' },
-  credit: { label: 'Credit', short: 'Credit', tone: 'turmeric', description: 'Facilities, filings and ratings' },
-  export: { label: 'Export', short: 'Export', tone: 'turmeric', description: 'IEC activity and shipment records' },
-  digital: { label: 'Digital', short: 'Digital', tone: 'jade', description: 'Web, commerce and ad activity' },
-  energy: { label: 'Energy', short: 'Energy', tone: 'turmeric', description: 'Solar, audits and utility filings' },
-  compliance: { label: 'Compliance', short: 'Compliance', tone: 'clay', description: 'Licences, filings and renewals' },
+  growth: { label: 'Growth', short: 'Growth', tone: 'jade', description: 'Illustrative expansion and turnover activity' },
+  hiring: { label: 'Hiring', short: 'Hiring', tone: 'jade', description: 'Sample headcount and role activity' },
+  credit: { label: 'Credit', short: 'Credit', tone: 'turmeric', description: 'Sample facilities and rating activity' },
+  export: { label: 'Export', short: 'Export', tone: 'turmeric', description: 'Sample trade and shipment activity' },
+  digital: { label: 'Digital', short: 'Digital', tone: 'jade', description: 'Sample web, commerce and ad activity' },
+  energy: { label: 'Energy', short: 'Energy', tone: 'turmeric', description: 'Sample solar, audit and utility activity' },
+  compliance: { label: 'Compliance', short: 'Compliance', tone: 'clay', description: 'Sample licence and renewal activity' },
 }
 
 export function daysLabel(days: number) {

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Search } from 'lucide-react'
-import { allDistricts, inrLakhs, slugify } from '../../lib/data'
+import { inrLakhs, slugify } from '../../lib/data'
+import { useDataset } from '../../lib/store'
 import { MAP_METRICS, metricLabel, type MapMetric } from '../../lib/map'
 import { TnMap, MapLegend } from '../TnMap'
 import { Sparkline } from '../Sparkline'
@@ -16,6 +17,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 ]
 
 export function CoverageExplorer() {
+  const { allDistricts } = useDataset()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [metric, setMetric] = useState<MapMetric>('momentum')
@@ -57,7 +59,7 @@ export function CoverageExplorer() {
               buying season. Open any district to see the accounts, signals and sectors behind the number.
             </p>
             <span className="coverage__count tnum">
-              {allDistricts.reduce((s, d) => s + d.prospects, 0)} accounts · 12 sectors · updated daily
+              {allDistricts.reduce((s, d) => s + d.prospects, 0)} synthetic accounts · 12 sectors · demo dataset
             </span>
           </div>
         </div>

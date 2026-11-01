@@ -17,11 +17,13 @@ import { Sparkline } from '../components/Sparkline'
 import { Meter } from '../components/Meter'
 import { ScoreRing } from '../components/ScoreRing'
 import { SignalChips } from '../components/Signals'
-import { allDistricts, inrLakhs, prospects, scoreOf, slugify } from '../lib/data'
+import { inrLakhs, scoreOf, slugify } from '../lib/data'
+import { useDataset } from '../lib/store'
 import { useWorkspace } from '../lib/store'
 import { useToast } from '../lib/toast'
 
 export function DistrictPage() {
+  const { allDistricts, prospects } = useDataset()
   const { slug } = useParams()
   const navigate = useNavigate()
   const { openAccount } = useOutletContext<OutletCtx>()

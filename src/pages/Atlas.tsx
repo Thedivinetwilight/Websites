@@ -19,7 +19,8 @@ import {
   metricLabel,
   type MapMetric,
 } from '../lib/map'
-import { REGIONS, allDistricts, inrLakhs, prospects, scoreOf, slugify } from '../lib/data'
+import { REGIONS, inrLakhs, scoreOf, slugify } from '../lib/data'
+import { useDataset } from '../lib/store'
 import { useWorkspace } from '../lib/store'
 import { useToast } from '../lib/toast'
 
@@ -34,6 +35,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 ]
 
 export function Atlas() {
+  const { allDistricts, prospects } = useDataset()
   const { openAccount } = useOutletContext<OutletCtx>()
   const ws = useWorkspace()
   const toast = useToast()
@@ -77,7 +79,7 @@ export function Atlas() {
     <div className="page page--atlas">
       <header className="page-head">
         <div>
-          <p className="page-eyebrow">District atlas · 37 districts · updated 06:30 IST</p>
+          <p className="page-eyebrow">District atlas · {allDistricts.length} districts · synthetic demo data</p>
           <h1 className="page-title display">Read the state before the map.</h1>
           <p className="page-sub">
             Switch the lens, pick a district, and see the accounts and sectors that make it move.
@@ -119,7 +121,7 @@ export function Atlas() {
           />
           <div className="atlas-map__foot">
             <span className="muted">Hover for a value · click to select</span>
-            <span className="atlas-map__count tnum">{metricLabel(selected, metric)}</span>
+            <span className="atlas-map__count tnum">{metricLabel(selected, metric, allDistricts)}</span>
           </div>
         </section>
 

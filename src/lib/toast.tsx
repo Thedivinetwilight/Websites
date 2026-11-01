@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
-import { Check, Info, X } from 'lucide-react'
+import { AlertTriangle, Check, Info, X } from 'lucide-react'
 
 interface ToastItem {
   id: number
   message: string
-  tone: 'success' | 'info'
+  tone: 'success' | 'info' | 'error'
 }
 
-const ToastContext = createContext<{ push: (message: string, tone?: 'success' | 'info') => void } | null>(null)
+const ToastContext = createContext<{ push: (message: string, tone?: 'success' | 'info' | 'error') => void } | null>(null)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([])
@@ -18,7 +18,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const push = useCallback(
-    (message: string, tone: 'success' | 'info' = 'success') => {
+    (message: string, tone: 'success' | 'info' | 'error' = 'success') => {
       const id = nextId.current++
       setItems((prev) => [...prev.slice(-2), { id, message, tone }])
       window.setTimeout(() => remove(id), 3800)
@@ -33,7 +33,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((t) => (
           <div key={t.id} className={`toast toast--${t.tone}`}>
             <span className="toast__icon">
-              {t.tone === 'success' ? <Check size={14} strokeWidth={2.6} /> : <Info size={14} />}
+              {t.tone === 'success' ? (
+                <Check size={14} strokeWidth={2.6} />
+              ) : t.tone === 'error' ? (
+                <AlertTriangle size={14} />
+              ) : (
+                <Info size={14} />
+              )}
             </span>
             <span>{t.message}</span>
             <button className="toast__close" onClick={() => remove(t.id)} aria-label="Dismiss">

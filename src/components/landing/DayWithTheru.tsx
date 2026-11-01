@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, Check, MapPin, MoveRight, StickyNote, Sun } from 'lucide-react'
-import { allDistricts, byId, inrLakhs, scoreOf } from '../../lib/data'
+import { inrLakhs, scoreOf } from '../../lib/data'
+import { useDataset } from '../../lib/store'
 import { ScoreRing } from '../ScoreRing'
 import { Meter } from '../Meter'
 import { TnMap } from '../TnMap'
@@ -34,6 +35,7 @@ const STEPS = [
 ]
 
 function BriefMock() {
+  const { byId } = useDataset()
   const rows = ['TH-1002', 'TH-1000', 'TH-1006']
     .map((id) => byId(id))
     .filter(Boolean)
@@ -72,6 +74,7 @@ function BriefMock() {
 }
 
 function DistrictMock() {
+  const { allDistricts } = useDataset()
   const d = allDistricts.find((x) => x.name === 'Tiruppur')!
   const maxSector = Math.max(...d.topSectors.map((s) => s.count))
   return (
@@ -120,6 +123,7 @@ function DistrictMock() {
 }
 
 function RouteMock() {
+  const { byId } = useDataset()
   const stops = ['TH-1003', 'TH-1002', 'TH-1010'].map((id) => byId(id)).filter(Boolean)
   const times = ['09:30', '11:15', '14:00']
   const legs = ['18 min · 9 km', '41 min · 35 km']
@@ -159,6 +163,7 @@ function RouteMock() {
 }
 
 function NotesMock() {
+  const { byId } = useDataset()
   const p = byId('TH-1010')!
   return (
     <div className="mock mock--notes">

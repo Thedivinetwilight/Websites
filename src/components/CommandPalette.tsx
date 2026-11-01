@@ -10,7 +10,8 @@ import {
   Search,
   Users,
 } from 'lucide-react'
-import { allDistricts, inrLakhs, prospects, scoreOf, slugify } from '../lib/data'
+import { inrLakhs, scoreOf, slugify } from '../lib/data'
+import { useDataset } from '../lib/store'
 
 const PAGES = [
   { label: 'Morning brief', hint: 'Overview', path: '/app', icon: LayoutDashboard },
@@ -38,6 +39,7 @@ export function CommandPalette({
   onClose: () => void
   onStartTour: () => void
 }) {
+  const { allDistricts, prospects } = useDataset()
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)

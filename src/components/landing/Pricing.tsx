@@ -134,11 +134,11 @@ export function Faq() {
   const ITEMS = [
     {
       q: 'Where does the data come from?',
-      a: 'Theru composes public, permissioned sources: MCA and GST registrations, Udyam filings, trade and export directories, hiring boards, and local licence and utility records. In this demo every business record is synthetic, while the district patterns mirror the real Tamil Nadu market.',
+      a: 'This is a product demo: every account, contact and signal is synthetic and nothing is scraped, purchased or imported from registries. The district patterns and boundaries are modelled on Tamil Nadu, but the records are fictional. A real deployment would connect only licensed or permissioned sources — that ingestion layer is not part of this demo.',
     },
     {
       q: 'How fresh is the morning brief?',
-      a: 'Signals are collected through the night and the brief is rebuilt at 06:30 IST, before the first call. Anything material that lands during the day — a new filing, a fresh export record — shows up as an alert on the account.',
+      a: 'The brief is generated from a fixed demo snapshot when the app loads. Nothing is collected overnight and no live feed is connected. In production the brief would rebuild before the first call from whatever sources a customer has licensed.',
     },
     {
       q: 'Is Theru a CRM?',
@@ -146,7 +146,7 @@ export function Faq() {
     },
     {
       q: 'Do smaller districts get the same depth?',
-      a: 'All 37 districts are modelled. Depth is weighted by business density, so Chennai carries more accounts than Perambalur — but every district has a momentum score, a sector mix and a live account list. Plans differ by how many district desks you can open, not by hiding the map.',
+      a: 'All 37 districts are modelled. Depth is weighted by business density, so Chennai carries more accounts than Perambalur — but every district has a momentum score, a sector mix and a full account list. Plans differ by how many district desks you can open, not by hiding the map.',
     },
     {
       q: 'Can the field team use it in Tamil?',
@@ -154,7 +154,7 @@ export function Faq() {
     },
     {
       q: 'What happens to our route history?',
-      a: 'Routes, notes and stages live in your workspace. On Enterprise they sync to your CRM; on smaller plans they can be exported as CSV at any time. Nothing from this demo leaves your browser.',
+      a: 'In this demo, routes, notes and stages live in a local SQLite database on the machine running the server — they survive refreshes and restarts, and the reset button restores the seeded workspace. In production they would live in your workspace and sync to your CRM on Enterprise plans.',
     },
   ]
 
@@ -172,7 +172,7 @@ export function Faq() {
           </h2>
           <p className="faq__note">
             Still deciding? The demo workspace answers most of these faster than a call. It is the full product, with
-            realistic data and nothing hidden behind a login.
+            synthetic but realistic data and nothing hidden behind a login.
           </p>
           <Link to="/app" className="btn btn--ghost btn--sm">
             Open the demo <ArrowRight size={14} />

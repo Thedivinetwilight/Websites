@@ -12,7 +12,8 @@ import {
   Users,
 } from 'lucide-react'
 import type { OutletCtx } from '../components/AppShell'
-import { OWNER_COLORS, inrLakhs, initials, prospects, scoreOf } from '../lib/data'
+import { OWNER_COLORS, inrLakhs, initials, scoreOf } from '../lib/data'
+import { useDataset } from '../lib/store'
 import { STAGES, useWorkspace } from '../lib/store'
 import { useToast } from '../lib/toast'
 import { ScoreRing } from '../components/ScoreRing'
@@ -20,6 +21,7 @@ import { SignalChips } from '../components/Signals'
 import type { Stage } from '../lib/types'
 
 export function MyList() {
+  const { prospects } = useDataset()
   const { openAccount } = useOutletContext<OutletCtx>()
   const ws = useWorkspace()
   const toast = useToast()
@@ -71,8 +73,8 @@ export function MyList() {
           <p className="page-eyebrow">Field pipeline · {ws.state.saved.length} saved accounts</p>
           <h1 className="page-title display">The conversations in motion.</h1>
           <p className="page-sub">
-            Drag a card, or use the arrows. Everything here is remembered in this browser — reset any time from the
-            sidebar.
+            Drag a card, or use the arrows. Every move is saved to the local demo database — reset any time from
+            the sidebar.
           </p>
         </div>
         <div className="page-head__actions">

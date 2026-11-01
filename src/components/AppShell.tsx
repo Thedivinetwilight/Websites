@@ -18,9 +18,9 @@ import { Brand } from './Brand'
 import { CommandPalette } from './CommandPalette'
 import { ProspectDrawer } from './ProspectDrawer'
 import { TourCard, TOUR_STOPS } from './Tour'
-import { useWorkspace } from '../lib/store'
+import { useDataset, useWorkspace } from '../lib/store'
 import { useToast } from '../lib/toast'
-import { TOTALS } from '../lib/data'
+
 
 const NAV = [
   { to: '/app', label: 'Morning brief', icon: LayoutDashboard, end: true, section: 'Workspace' },
@@ -41,6 +41,7 @@ const TITLES: Record<string, string> = {
 const DEMO_TODAY = new Date('2026-11-01T09:12:00+05:30')
 
 export function AppShell() {
+  const { totals: TOTALS } = useDataset()
   const ws = useWorkspace()
   const toast = useToast()
   const navigate = useNavigate()
@@ -188,7 +189,8 @@ export function AppShell() {
           <div>
             <p className="data-note__title">Synthetic demo data</p>
             <p className="data-note__body">
-              {TOTALS.signals.toLocaleString('en-IN')} signals across {TOTALS.districts} districts, refreshed daily.
+              {TOTALS.signals.toLocaleString('en-IN')} illustrative signals across {TOTALS.districts} districts. No live
+              data feeds.
             </p>
           </div>
         </div>
