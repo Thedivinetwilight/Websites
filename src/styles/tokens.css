@@ -1,0 +1,69 @@
+:root {
+  /* Palette — derived from Tamil Nadu street signage, jaggery paper and indigo.
+     Deep green carries structure, turmeric carries attention. */
+  --ink-900: #0a1712;
+  --ink-800: #0e1f18;
+  --ink-700: #162c22;
+  --ink-600: #223a2e;
+  --ink-500: #3a5145;
+
+  --paper: #f5efe3;
+  --paper-2: #eee6d6;
+  --paper-3: #e5dbc7;
+  --card: #fffdf7;
+  --card-2: #faf5ea;
+
+  --jade-700: #0a4f3f;
+  --jade-600: #0e6653;
+  --jade-500: #17775f;
+  --jade-400: #2f9179;
+  --jade-100: #dfece4;
+  --jade-50: #eef5ef;
+
+  --turmeric-600: #b1741c;
+  --turmeric-500: #e0a13d;
+  --turmeric-400: #edbb6b;
+  --turmeric-100: #f8e7c8;
+
+  --clay-600: #a3472f;
+  --clay-500: #bf5a3c;
+  --clay-100: #f6ded4;
+
+  --slate-600: #5c6d64;
+  --slate-500: #74857c;
+  --slate-300: #a9b6ae;
+
+  --line: rgba(10, 23, 18, 0.13);
+  --line-soft: rgba(10, 23, 18, 0.07);
+  --line-strong: rgba(10, 23, 18, 0.24);
+  --line-invert: rgba(245, 239, 227, 0.16);
+
+  --font-display: 'Theru Symbols', 'Theru Rupee', 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'Theru Symbols', 'Theru Rupee', 'Instrument Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-tamil: 'Theru Symbols', 'Noto Sans Tamil', 'Latha', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  --shadow-xs: 0 1px 2px rgba(10, 23, 18, 0.05);
+  --shadow-sm: 0 2px 6px rgba(10, 23, 18, 0.06), 0 1px 2px rgba(10, 23, 18, 0.04);
+  --shadow-md: 0 12px 30px -18px rgba(10, 23, 18, 0.35), 0 2px 8px rgba(10, 23, 18, 0.04);
+  --shadow-lg: 0 40px 70px -40px rgba(10, 23, 18, 0.45), 0 10px 24px -18px rgba(10, 23, 18, 0.25);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+
+  --maxw: 1220px;
+  --nav-h: 72px;
+
+  --ease-out: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --ease-soft: cubic-bezier(0.4, 0.14, 0.3, 1);
+}
+
+@media (max-width: 720px) {
+  :root {
+    --nav-h: 62px;
+  }
+}
